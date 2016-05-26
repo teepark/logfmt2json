@@ -4,6 +4,8 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
+	"flag"
 	"io"
 	"log"
 	"os"
@@ -13,17 +15,23 @@ import (
 
 type entry map[string]interface{}
 
+var errNoVal = errors.New("value-less key")
+
 func (e *entry) HandleLogfmt(key, value []byte) error {
 	if len(value) == 0 {
-		(*e)[string(key)] = true
-	} else {
-		(*e)[string(key)] = string(value)
+		return errNoVal
 	}
 
+	(*e)[string(key)] = string(value)
 	return nil
 }
 
 func main() {
+	var verbose bool
+	verboseFlag(&verbose)
+
+	flag.Parse()
+
 	rdr := bufio.NewReader(os.Stdin)
 	enc := json.NewEncoder(os.Stdout)
 
@@ -38,7 +46,9 @@ func main() {
 			e := make(entry)
 			err := logfmt.Unmarshal(line, &e)
 			if err != nil {
-				log.Printf("invalid logfmt (%q) %s", string(line), err)
+				if verbose {
+					log.Printf("invalid logfmt (%q): %s", string(line), err)
+				}
 			} else {
 				if err := enc.Encode(e); err != nil {
 					log.Printf("error encoding JSON: %s", err)
@@ -54,4 +64,10 @@ func main() {
 			log.Fatalf("error reading stdin: %s", err)
 		}
 	}
+}
+
+func verboseFlag(v *bool) {
+	usage := "Complain to stderr on invalid logfmt input"
+	flag.BoolVar(v, "v", false, usage)
+	flag.BoolVar(v, "verbose", false, usage)
 }
