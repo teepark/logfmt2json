@@ -52,7 +52,7 @@ func main() {
 			err := logfmt.Unmarshal(line, &e)
 			if err != nil {
 				if verbose {
-					log.Printf("invalid logfmt (%s): %q", err, string(line))
+					log.Printf("invalid logfmt (%s): %q", err, string(line[:len(line)-1]))
 				}
 			} else {
 				if err := enc.Encode(e); err != nil {
