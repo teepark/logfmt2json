@@ -4,8 +4,8 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -15,15 +15,20 @@ import (
 
 type entry map[string]interface{}
 
-var errNoVal = errors.New("value-less key")
-
 func (e *entry) HandleLogfmt(key, value []byte) error {
 	if len(value) == 0 {
-		return errNoVal
+		return valueLessKey(key)
 	}
 
 	(*e)[string(key)] = string(value)
 	return nil
+}
+
+// the string is just the key name
+type valueLessKey string
+
+func (vlk valueLessKey) Error() string {
+	return fmt.Sprintf("value-less key %q", string(vlk))
 }
 
 func main() {
@@ -47,7 +52,7 @@ func main() {
 			err := logfmt.Unmarshal(line, &e)
 			if err != nil {
 				if verbose {
-					log.Printf("invalid logfmt (%q): %s", string(line), err)
+					log.Printf("invalid logfmt (%s): %q", err, string(line))
 				}
 			} else {
 				if err := enc.Encode(e); err != nil {
